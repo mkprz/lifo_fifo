@@ -23,6 +23,9 @@
 // (i.e. First In, First Out - FIFO).
  
 #include <cassert>
+#include <cmath>
+#include <iostream>
+using namespace std;
 
 class MyLifo {
     public:
@@ -48,14 +51,14 @@ class MyLifo {
             return resp;
         }
 
-        // returns next int value in LIFO order
-        // or a null terminating character '\0' if nothing left in LIFO
-        int Pop()
+        // returns 1 if success, 0 if nothing in LIFO
+        int Pop(int &value)
         {
-            int resp = '\0';
-            if( _index >= 0 && _index < _size-1 ) {
-                resp = _stack[_index];
+            int resp = 0;
+            if( _index > 0 && _index <= _size ) {
                 _index--;
+                value = _stack[_index];
+                resp = 1;
             }
             return resp;
         }
@@ -70,7 +73,7 @@ class MyLifo {
 class MyFifo {
 public:
     MyFifo(unsigned int size)
-        : _size(size), _head(0), _tail(0), _stack(new int[size])
+        : _size(size), _curr(0), _next(1), _count(0), _stack(new int[size])
     {
     }
 
@@ -82,30 +85,43 @@ public:
     // returns 1 if success, 0 if cannot push anymore values onto FIFO
     int Queue(int value)
     {
-        _stack[_tail] = value;
-        _tail++;
-        if( _tail >= _size-1 ) {
-            _tail = 0;
+        int resp = 0;
+        if( _count < _size ) {
+            if( _next > 0 )
+                _stack[_next-1] = value;
+            else
+                _stack[_size-1] = value;
+            _next++;
+            _count++;
+            if( _next >= _size ) {
+                _next = 0;
+            }
+            resp = 1;
         }
-        return 1;
+        return resp;
     }
 
-    // returns next int value in FIFO order
-    // or a null terminating character '\0' if nothing left in FIFO
-    int Dequeue()
+    // returns 1 if success, 0 if nothing left in FIFO
+    int Dequeue(int &value)
     {
-        int resp = _stack[_head];
-        _head++;
-        if( _head >= _size-1 ) {
-            _head = 0;
+        int resp = 0;
+        if( _count > 0 && _count <= _size ) {
+            value = _stack[_curr];
+            _curr++;
+            _count--;
+            if( _curr >= _size ) {
+                _curr = 0;
+            }
+            resp = 1;
         }
-        return 1;
+        return resp;
     }
 
 
 private:
     const unsigned int _size;
-    unsigned int _head, _tail;
+    unsigned int _curr, _next;
+    unsigned int _count;
     int * const _stack;
 
 };
@@ -119,21 +135,29 @@ int main() {
     assert( my_lifo.Push(7) == 1 );
     assert( my_lifo.Push(1) == 0 );
 
-    int value = my_lifo.Pop();
+    int value = 0;
+    assert( my_lifo.Pop(value) == 1);
     assert( value == 7 );
-    assert( my_lifo.Pop() == 5 );
-    assert( my_lifo.Pop() == 3 );
-    assert( my_lifo.Pop() == '\0' );
+    assert( my_lifo.Pop(value) == 1 );
+    assert( value == 5 );
+    assert( my_lifo.Pop(value) == 1 );
+    assert( value == 3 );
+    assert( my_lifo.Pop(value) == 0 );
+    assert( value == 3 );
 
     assert( my_fifo.Queue(2) == 1 );
     assert( my_fifo.Queue(4) == 1 );
     assert( my_fifo.Queue(6) == 1 );
     assert( my_fifo.Queue(8) == 0 );
 
-    assert( my_fifo.Dequeue() == 2 );
-    assert( my_fifo.Dequeue() == 4 );
-    assert( my_fifo.Dequeue() == 6 );
-    assert( my_fifo.Dequeue() == '\0' );
+    assert( my_fifo.Dequeue(value) == 1 );
+    assert( value == 2 );
+    assert( my_fifo.Dequeue(value) == 1 );
+    assert( value == 4 );
+    assert( my_fifo.Dequeue(value) == 1 );
+    assert( value == 6 );
+    assert( my_fifo.Dequeue(value) == 0 );
+    assert( value == 6 );
 
     return 0;
 }
